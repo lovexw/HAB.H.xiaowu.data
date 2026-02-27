@@ -7,13 +7,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 1rem;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
             border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+        .progress-gradient {
+            background: linear-gradient(90deg, #34d399 0%, #059669 100%);
         }
     </style>
 </head>
@@ -33,9 +36,22 @@
 
     <div class="max-w-4xl mx-auto px-6 -mt-10">
         
+        <div class="glass-card p-6 mb-6">
+            <h2 class="text-sm font-semibold text-gray-500 mb-3 uppercase tracking-wider">减重目标进度</h2>
+            <div class="flex justify-between text-sm text-gray-700 mb-2 font-medium">
+                <span>起点: 165.5 斤</span>
+                <span id="current-weight-display" class="text-emerald-600 font-bold text-base">当前: -- 斤</span>
+                <span>目标: 130.0 斤</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
+                <div id="progress-bar-fill" class="progress-gradient h-3 rounded-full transition-all duration-1000 ease-out" style="width: 0%"></div>
+            </div>
+            <p id="progress-text" class="text-xs text-center text-gray-500 font-medium"></p>
+        </div>
+
         <div class="glass-card p-6 mb-8">
             <h2 class="text-lg font-semibold mb-2 text-gray-800">体重与体脂宏观趋势</h2>
-            <div id="trendChart" style="width: 100%; height: 320px;"></div>
+            <div id="trendChart" style="width: 100%; height: 340px;"></div>
         </div>
 
         <div class="mb-4">
@@ -47,119 +63,43 @@
 
     <script>
         // ==========================================
-        // 你的完整数据库（已加入 12 月到 1 月的数据）
+        // 核心参数设置
+        // ==========================================
+        const START_WEIGHT = 165.5; // 你的初始体重
+        const TARGET_WEIGHT = 130.0; // 你的终极目标
+
+        // ==========================================
+        // 核心数据库
         // ==========================================
         const journalData = [
+            { date: '2025-12-18', type: 'milestone', badge: '🏁 记录起点', weight: 165.5, fat: 28.3, diary: '这是有记录以来的初始状态，决定开始改变，记录下这个起点作为未来的对比。' },
+            { date: '2025-12-30', type: 'daily', badge: '📉 明显下降', weight: 160.0, fat: 27.4, diary: '不到两周时间降到了 160 斤，掉了 5 斤半！初期掉秤很明显。' },
+            { date: '2026-01-01', type: 'milestone', badge: '🎆 新年里程碑', weight: 159.6, fat: 27.2, diary: '新年第一天，体重正式跌破 160 斤大关！继续保持。' },
+            { date: '2026-01-04', type: 'daily', badge: '📝 日常打卡', weight: 158.1, fat: 27.1, diary: '稳步下降中。虽然体脂率变化不大，但体重又降了 1.5 斤。' },
+            { date: '2026-01-06', type: 'daily', badge: '⚠️ 波动记录', weight: 159.0, fat: 27.1, diary: '体重稍微反弹了 0.9 斤。很正常的生理波动，坚持现在的饮食结构就好。' },
+            { date: '2026-01-07', type: 'daily', badge: '📝 日常打卡', weight: 158.0, fat: 26.8, diary: '昨天的反弹只是暂时的，今天又降回来了，而且体脂率跌破 27% 了！' },
+            { date: '2026-01-10', type: 'daily', badge: '📝 日常打卡', weight: 156.6, fat: 26.6, diary: '继续平稳下降，身体似乎已经开始适应减脂的状态了。' },
+            { date: '2026-01-17', type: 'daily', badge: '📝 日常打卡', weight: 155.9, fat: 26.3, diary: '速度放缓，但是体脂率在持续稳定下降，这是减纯脂肪的好现象。' },
+            { date: '2026-01-21', type: 'daily', badge: '📝 日常打卡', weight: 154.6, fat: 26.2, diary: '相比一个月前（165.5斤），整整轻了 11 斤，整个人感觉轻快了很多。' },
+            { date: '2026-01-25', type: 'daily', badge: '📝 日常打卡', weight: 155.3, fat: 26.1, diary: '体重微调反弹了 0.7 斤，但是体脂率依然在降（26.1%）。' },
+            { date: '2026-01-27', type: 'daily', badge: '📝 日常打卡', weight: 153.4, fat: 25.9, diary: '降幅很稳，体脂率正式跌破 26% 啦！' },
+            { date: '2026-01-30', type: 'daily', badge: '📝 日常打卡', weight: 152.3, fat: 25.5, diary: '快逼近 150 斤大关了，继续坚持生酮，冲刺！' },
+            { date: '2026-01-31', type: 'daily', badge: '📝 日常打卡', weight: 151.4, fat: 25.3, diary: '一个月最后一天，151.4斤，离 150 只差临门一脚。' },
+            { date: '2026-02-05', type: 'daily', badge: '📉 核心指标', weight: 150.5, fat: 24.9, diary: '体脂率率先跌破 25%！体重 150.5，马上就要破百五了，激动！' },
+            { date: '2026-02-06', type: 'milestone', badge: '🎉 破150大关', weight: 149.8, fat: 24.9, diary: '历史性时刻！体重终于跌破 150 斤！回想 12 月底的 165.5 斤，这一个半月的坚持真的太值了。' },
+            { date: '2026-02-07', type: 'daily', badge: '⚠️ 波动记录', weight: 150.5, fat: 24.9, diary: '稍微喝多点水或者排泄问题反弹了一点，不怕，体脂依然稳在 24.9%。' },
+            { date: '2026-02-08', type: 'daily', badge: '📝 日常打卡', weight: 149.7, fat: 24.7, diary: '重回 150 以内，体脂 24.7%，稳了稳了。' },
+            { date: '2026-02-10', type: 'daily', badge: '📝 日常打卡', weight: 149.4, fat: 24.8, diary: '稳步在 149 斤左右扎根，继续巩固。' },
+            { date: '2026-02-12', type: 'daily', badge: '📝 日常打卡', weight: 148.6, fat: 24.4, diary: '体重来到 148.6 斤！生酮的威力依然在发挥。' },
+            { date: '2026-02-18', type: 'daily', badge: '📝 日常打卡', weight: 149.4, fat: 24.5, diary: '轻微波动，维持在 149 上下。' },
+            { date: '2026-02-20', type: 'daily', badge: '📝 日常打卡', weight: 148.6, fat: 24.4, diary: '目前算下来从最高点已经减了快 17 斤了。稳住当前的饮食节奏。' },
+            
+            // ⭐️ 本次新增：24号和25号的突破数据
+            { date: '2026-02-24', type: 'daily', badge: '📝 日常打卡', weight: 148.2, fat: 24.3, diary: '打破了前几天的平台，体重降至 148.2 斤，体脂率也跟着下探到 24.3%，继续稳步前行。' },
+            { date: '2026-02-25', type: 'milestone', badge: '🏆 身体及格！', weight: 146.8, fat: 23.6, diary: '大突破！一天之内降了 1.4 斤，直接来到 146.8 斤！体脂率更是降到了 23.6%，连身体得分也正式来到 61 分及格线！掉的都是纯脂肪，离 130 斤的目标越来越近了！' },
+            
             {
-                date: '2025-12-18',
-                type: 'milestone', 
-                badge: '🏁 记录起点',
-                weight: 165.5,
-                fat: 28.3,
-                diary: '这是有记录以来的初始状态，体重 165.5 斤，体脂率 28.3%。决定开始改变，记录下这个起点作为未来的对比。'
-            },
-            {
-                date: '2025-12-30',
-                type: 'daily',
-                badge: '📉 明显下降',
-                weight: 160.0,
-                fat: 27.4,
-                diary: '不到两周时间降到了 160 斤，掉了 5 斤半！初期掉秤很明显，体脂也下降了接近 1%。'
-            },
-            {
-                date: '2026-01-01',
-                type: 'milestone',
-                badge: '🎆 新年里程碑',
-                weight: 159.6,
-                fat: 27.2,
-                diary: '新年第一天，体重正式跌破 160 斤大关！是一个非常好的新年礼物。继续保持。'
-            },
-            {
-                date: '2026-01-04',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 158.1,
-                fat: 27.1,
-                diary: '稳步下降中。虽然体脂率变化不大，但体重又降了 1.5 斤。'
-            },
-            {
-                date: '2026-01-06',
-                type: 'daily',
-                badge: '⚠️ 波动记录',
-                weight: 159.0,
-                fat: 27.1,
-                diary: '体重稍微反弹了 0.9 斤。很正常的生理波动，不用焦虑，坚持现在的饮食结构就好。'
-            },
-            {
-                date: '2026-01-07',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 158.0,
-                fat: 26.8,
-                diary: '果然，昨天的反弹只是暂时的，今天又降回来了，而且体脂率跌破 27% 了！'
-            },
-            {
-                date: '2026-01-10',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 156.6,
-                fat: 26.6,
-                diary: '继续平稳下降，156.6 斤。身体似乎已经开始适应减脂的状态了。'
-            },
-            {
-                date: '2026-01-17',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 155.9,
-                fat: 26.3,
-                diary: '一周时间降了 0.7 斤，虽然速度放缓，但是体脂率在持续稳定下降，这是减纯脂肪的好现象。'
-            },
-            {
-                date: '2026-01-21',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 154.6,
-                fat: 26.2,
-                diary: '体重 154.6 斤。相比一个月前（165.5斤），整整轻了将近 11 斤，整个人感觉轻快了很多。'
-            },
-            {
-                date: '2026-01-25',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 155.3,
-                fat: 26.1,
-                diary: '体重微调反弹了 0.7 斤，但是体脂率依然在降（26.1%）。所以不要只看体重，体脂才是核心。'
-            },
-            {
-                date: '2026-02-12',
-                type: 'milestone',
-                badge: '🎉 阶段突破',
-                weight: 148.6,
-                fat: 24.4,
-                diary: '太惊喜了！经过一段时间，体重直接跌破 150 大关来到了 148.6 斤！体脂率降至 24.4%。生酮的威力彻底显现出来了。'
-            },
-            {
-                date: '2026-02-18',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 149.4,
-                fat: 24.5,
-                diary: '轻微波动，体重 149.4 斤。'
-            },
-            {
-                date: '2026-02-20',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 148.6,
-                fat: 24.4,
-                diary: '目前算下来从最高点已经减了快 17 斤了。稳住当前的饮食节奏。'
-            },
-            {
-                date: '2026-02-26',
-                type: 'medical',
-                badge: '🏥 血液/尿液筛查',
-                weight: 148.0,
-                fat: 24.2,
+                date: '2026-02-26', type: 'medical', badge: '🏥 血液/尿液筛查', weight: 146.8, fat: 23.6, // 沿用昨日完美体重
                 diary: '今天进行了一次全面的化验。其中空腹胰岛素控制得非常漂亮（9.70 mU/L），处于绝对正常的范围内，说明没有严重的胰岛素抵抗。结合尿酮弱阳性，身体正在高效利用脂肪。部分血常规指标略有异常（血钠偏低），可能和生酮利尿流失电解质有关，后续要注意补充海盐。',
                 medicalData: [
                     {
@@ -181,16 +121,34 @@
             }
         ];
 
+        // ==========================================
+        // 动态计算进度条逻辑
+        // ==========================================
+        const validWeights = journalData.filter(item => item.weight);
+        const currentWeight = validWeights[validWeights.length - 1].weight; // 获取最新体重
+        const totalToLose = START_WEIGHT - TARGET_WEIGHT;
+        const lostSoFar = START_WEIGHT - currentWeight;
+        let progressPercent = ((lostSoFar / totalToLose) * 100).toFixed(1);
+        if (progressPercent < 0) progressPercent = 0;
+        if (progressPercent > 100) progressPercent = 100;
+
+        // 延迟一点点执行动画，效果更好
+        setTimeout(() => {
+            document.getElementById('current-weight-display').textContent = `当前: ${currentWeight} 斤`;
+            document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
+            document.getElementById('progress-text').innerHTML = `已完成减重目标 <span class="text-emerald-600 font-bold">${progressPercent}%</span> 🔥 (共减去 ${(lostSoFar).toFixed(1)} 斤)`;
+        }, 300);
+
+        // ==========================================
         // 渲染时间轴
+        // ==========================================
         const timelineContainer = document.getElementById('timeline-container');
-        
         [...journalData].reverse().forEach(item => {
             let badgeColor = 'bg-gray-100 text-gray-700';
-            if(item.type === 'milestone') badgeColor = 'bg-yellow-100 text-yellow-700';
-            if(item.type === 'medical') badgeColor = 'bg-blue-100 text-blue-700';
+            if(item.type === 'milestone') badgeColor = 'bg-yellow-100 text-yellow-700 shadow-sm';
+            if(item.type === 'medical') badgeColor = 'bg-blue-100 text-blue-700 shadow-sm';
             if(item.type === 'daily') badgeColor = 'bg-emerald-50 text-emerald-600';
 
-            // 构建基础指标栏 (体重/体脂)
             let basicStatsHtml = '';
             if (item.weight && item.fat) {
                 basicStatsHtml = `
@@ -201,7 +159,6 @@
                 `;
             }
 
-            // 构建灵活的医疗数据 HTML
             let medicalHtml = '';
             if (item.medicalData) {
                 item.medicalData.forEach(group => {
@@ -211,20 +168,14 @@
                         return `
                             <div class="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
                                 <span class="text-sm text-gray-600">${m.name}</span>
-                                <div>
-                                    <span class="text-sm ${valColor}">${m.value} <span class="text-xs text-gray-400">${m.unit}</span></span>
-                                    ${extraNote}
-                                </div>
+                                <div><span class="text-sm ${valColor}">${m.value} <span class="text-xs text-gray-400">${m.unit}</span></span>${extraNote}</div>
                             </div>
                         `;
                     }).join('');
-                    
                     medicalHtml += `
                         <div class="mt-4 bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
                             <h4 class="text-sm font-semibold text-gray-700 mb-2 border-l-2 border-emerald-400 pl-2">${group.category}</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
-                                ${itemsHtml}
-                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">${itemsHtml}</div>
                         </div>
                     `;
                 });
@@ -239,9 +190,7 @@
                             <span class="${badgeColor} text-xs px-2.5 py-1 rounded-full font-medium">${item.badge}</span>
                         </div>
                         ${basicStatsHtml}
-                        <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line border-l-2 border-emerald-100 pl-3">
-                            ${item.diary}
-                        </div>
+                        <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line border-l-2 border-emerald-100 pl-3">${item.diary}</div>
                         ${medicalHtml}
                     </div>
                 </div>
@@ -249,28 +198,65 @@
             timelineContainer.innerHTML += card;
         });
 
-        // 渲染 ECharts 
+        // ==========================================
+        // 渲染 ECharts 图表 (加入目标线)
+        // ==========================================
         const chartDom = document.getElementById('trendChart');
         const myChart = echarts.init(chartDom);
         const chartData = journalData.filter(item => item.weight && item.fat);
+        
         const option = {
             tooltip: { trigger: 'axis' },
             legend: { data: ['体重 (斤)', '体脂率 (%)'], bottom: 0 },
-            grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+            grid: { left: '3%', right: '4%', bottom: '15%', top: '12%', containLabel: true },
             xAxis: { 
                 type: 'category', 
                 boundaryGap: false, 
-                data: chartData.map(item => item.date.substring(5)), // 只显示月-日，让横轴更清爽
+                data: chartData.map(item => item.date.substring(5)),
                 axisLine: { lineStyle: { color: '#e5e7eb' } }, 
-                axisLabel: { color: '#6b7280' } 
+                axisLabel: { color: '#6b7280', rotate: 30 }
             },
             yAxis: [
-                { type: 'value', min: 'dataMin', name: '体重', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } },
-                { type: 'value', min: 'dataMin', name: '体脂率', position: 'right', axisLine: { show: false }, splitLine: { show: false } }
+                { 
+                    type: 'value', 
+                    name: '体重',
+                    // 让图表能一直显示到 130 斤以下
+                    min: function (value) { return Math.min(value.min, 128); }, 
+                    axisLine: { show: false }, 
+                    splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } 
+                },
+                { 
+                    type: 'value', 
+                    name: '体脂率', 
+                    min: 'dataMin',
+                    position: 'right', 
+                    axisLine: { show: false }, 
+                    splitLine: { show: false } 
+                }
             ],
             series: [
-                { name: '体重 (斤)', type: 'line', smooth: true, itemStyle: { color: '#10b981' }, data: chartData.map(item => item.weight) },
-                { name: '体脂率 (%)', type: 'line', smooth: true, yAxisIndex: 1, itemStyle: { color: '#f59e0b' }, data: chartData.map(item => item.fat) }
+                { 
+                    name: '体重 (斤)', 
+                    type: 'line', 
+                    smooth: true, 
+                    itemStyle: { color: '#10b981' }, 
+                    data: chartData.map(item => item.weight),
+                    // ✨ 在这里加入 130斤 目标线 ✨
+                    markLine: {
+                        symbol: ['none', 'none'],
+                        label: { show: true, position: 'insideStartTop', formatter: '🎯 目标 130斤', color: '#059669', fontWeight: 'bold' },
+                        lineStyle: { type: 'dashed', color: '#10b981', width: 2 },
+                        data: [{ yAxis: 130 }]
+                    }
+                },
+                { 
+                    name: '体脂率 (%)', 
+                    type: 'line', 
+                    smooth: true, 
+                    yAxisIndex: 1, 
+                    itemStyle: { color: '#f59e0b' }, 
+                    data: chartData.map(item => item.fat) 
+                }
             ]
         };
         myChart.setOption(option);
