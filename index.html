@@ -35,7 +35,7 @@
         
         <div class="glass-card p-6 mb-8">
             <h2 class="text-lg font-semibold mb-2 text-gray-800">体重与体脂宏观趋势</h2>
-            <div id="trendChart" style="width: 100%; height: 300px;"></div>
+            <div id="trendChart" style="width: 100%; height: 320px;"></div>
         </div>
 
         <div class="mb-4">
@@ -47,17 +47,104 @@
 
     <script>
         // ==========================================
-        // 数据库
-        // 注意看 2026-02-26 这条记录的 medicalData 结构
+        // 你的完整数据库（已加入 12 月到 1 月的数据）
         // ==========================================
         const journalData = [
             {
-                date: '2025-12-24',
+                date: '2025-12-18',
                 type: 'milestone', 
-                badge: '🏁 生酮启动',
+                badge: '🏁 记录起点',
+                weight: 165.5,
+                fat: 28.3,
+                diary: '这是有记录以来的初始状态，体重 165.5 斤，体脂率 28.3%。决定开始改变，记录下这个起点作为未来的对比。'
+            },
+            {
+                date: '2025-12-30',
+                type: 'daily',
+                badge: '📉 明显下降',
                 weight: 160.0,
-                fat: 28.5,
-                diary: '把今天标记为生酮饮食的 Day 1。正式开始记录各项身体指标的变化。'
+                fat: 27.4,
+                diary: '不到两周时间降到了 160 斤，掉了 5 斤半！初期掉秤很明显，体脂也下降了接近 1%。'
+            },
+            {
+                date: '2026-01-01',
+                type: 'milestone',
+                badge: '🎆 新年里程碑',
+                weight: 159.6,
+                fat: 27.2,
+                diary: '新年第一天，体重正式跌破 160 斤大关！是一个非常好的新年礼物。继续保持。'
+            },
+            {
+                date: '2026-01-04',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 158.1,
+                fat: 27.1,
+                diary: '稳步下降中。虽然体脂率变化不大，但体重又降了 1.5 斤。'
+            },
+            {
+                date: '2026-01-06',
+                type: 'daily',
+                badge: '⚠️ 波动记录',
+                weight: 159.0,
+                fat: 27.1,
+                diary: '体重稍微反弹了 0.9 斤。很正常的生理波动，不用焦虑，坚持现在的饮食结构就好。'
+            },
+            {
+                date: '2026-01-07',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 158.0,
+                fat: 26.8,
+                diary: '果然，昨天的反弹只是暂时的，今天又降回来了，而且体脂率跌破 27% 了！'
+            },
+            {
+                date: '2026-01-10',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 156.6,
+                fat: 26.6,
+                diary: '继续平稳下降，156.6 斤。身体似乎已经开始适应减脂的状态了。'
+            },
+            {
+                date: '2026-01-17',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 155.9,
+                fat: 26.3,
+                diary: '一周时间降了 0.7 斤，虽然速度放缓，但是体脂率在持续稳定下降，这是减纯脂肪的好现象。'
+            },
+            {
+                date: '2026-01-21',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 154.6,
+                fat: 26.2,
+                diary: '体重 154.6 斤。相比一个月前（165.5斤），整整轻了将近 11 斤，整个人感觉轻快了很多。'
+            },
+            {
+                date: '2026-01-25',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 155.3,
+                fat: 26.1,
+                diary: '体重微调反弹了 0.7 斤，但是体脂率依然在降（26.1%）。所以不要只看体重，体脂才是核心。'
+            },
+            {
+                date: '2026-02-12',
+                type: 'milestone',
+                badge: '🎉 阶段突破',
+                weight: 148.6,
+                fat: 24.4,
+                diary: '太惊喜了！经过一段时间，体重直接跌破 150 大关来到了 148.6 斤！体脂率降至 24.4%。生酮的威力彻底显现出来了。'
+            },
+            {
+                date: '2026-02-18',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 149.4,
+                fat: 24.5,
+                diary: '轻微波动，体重 149.4 斤。'
             },
             {
                 date: '2026-02-20',
@@ -65,36 +152,29 @@
                 badge: '📝 日常打卡',
                 weight: 148.6,
                 fat: 24.4,
-                diary: '体重维持不变。目前算下来还有大概 16 斤脂肪要减。先稳住当前的饮食节奏。'
+                diary: '目前算下来从最高点已经减了快 17 斤了。稳住当前的饮食节奏。'
             },
-            // ⭐️ 新增的医疗记录格式：
             {
                 date: '2026-02-26',
                 type: 'medical',
                 badge: '🏥 血液/尿液筛查',
-                weight: 148.0, // 如果当天没称重，可以删掉这行
+                weight: 148.0,
                 fat: 24.2,
-                diary: '今天进行了一次全面的化验。空腹胰岛素控制得很漂亮，尿酮呈弱阳性，说明身体已经顺利进入/保持在生酮状态。部分血常规指标略有异常（血钠偏低），可能和生酮利尿流失电解质有关，后续要注意补充海盐。',
-                // 灵活的医疗数据块，想加几条加几条，想换项目就换项目
+                diary: '今天进行了一次全面的化验。其中空腹胰岛素控制得非常漂亮（9.70 mU/L），处于绝对正常的范围内，说明没有严重的胰岛素抵抗。结合尿酮弱阳性，身体正在高效利用脂肪。部分血常规指标略有异常（血钠偏低），可能和生酮利尿流失电解质有关，后续要注意补充海盐。',
                 medicalData: [
                     {
                         category: '🟢 生酮核心代谢',
                         items: [
-                            { name: '空腹胰岛素', value: '9.70', unit: 'mU/L', normal: true },
+                            { name: '空腹胰岛素', value: '9.70', unit: 'mU/L', normal: true, note: '绝佳状态' },
                             { name: '葡萄糖', value: '4.960', unit: 'mmol/L', normal: true },
                             { name: '尿酮体', value: '+-', unit: '', normal: true, note: '弱阳' },
-                            { name: '甘油三酯', value: '0.600', unit: 'mmol/L', normal: true },
-                            { name: '高密度脂蛋白', value: '1.340', unit: 'mmol/L', normal: true },
-                            { name: '低密度脂蛋白', value: '2.980', unit: 'mmol/L', normal: true },
-                            { name: '尿酸', value: '216.00', unit: 'μmol/L', normal: true }
+                            { name: '甘油三酯', value: '0.600', unit: 'mmol/L', normal: true }
                         ]
                     },
                     {
                         category: '🔴 异常指标提醒',
                         items: [
-                            { name: '钠 (Na)', value: '136.70', unit: 'mmol/L', normal: false, status: '↓ 偏低' },
-                            { name: '嗜酸性粒细胞比值', value: '15.7', unit: '%', normal: false, status: '↑ 偏高' },
-                            { name: '大血小板比率', value: '33.3', unit: '%', normal: false, status: '↑ 偏高' }
+                            { name: '钠 (Na)', value: '136.70', unit: 'mmol/L', normal: false, status: '↓ 偏低' }
                         ]
                     }
                 ]
@@ -169,7 +249,7 @@
             timelineContainer.innerHTML += card;
         });
 
-        // 渲染 ECharts (保持不变)
+        // 渲染 ECharts 
         const chartDom = document.getElementById('trendChart');
         const myChart = echarts.init(chartDom);
         const chartData = journalData.filter(item => item.weight && item.fat);
@@ -177,7 +257,13 @@
             tooltip: { trigger: 'axis' },
             legend: { data: ['体重 (斤)', '体脂率 (%)'], bottom: 0 },
             grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
-            xAxis: { type: 'category', boundaryGap: false, data: chartData.map(item => item.date), axisLine: { lineStyle: { color: '#e5e7eb' } }, axisLabel: { color: '#6b7280' } },
+            xAxis: { 
+                type: 'category', 
+                boundaryGap: false, 
+                data: chartData.map(item => item.date.substring(5)), // 只显示月-日，让横轴更清爽
+                axisLine: { lineStyle: { color: '#e5e7eb' } }, 
+                axisLabel: { color: '#6b7280' } 
+            },
             yAxis: [
                 { type: 'value', min: 'dataMin', name: '体重', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } },
                 { type: 'value', min: 'dataMin', name: '体脂率', position: 'right', axisLine: { show: false }, splitLine: { show: false } }
