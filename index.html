@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
@@ -40,7 +40,6 @@
 
         <div class="mb-4">
             <h2 class="text-xl font-bold text-gray-800 mb-6">变化日志 & 医疗记录</h2>
-            
             <div id="timeline-container" class="relative border-l-2 border-emerald-200 ml-4 space-y-8 pb-4">
                 </div>
         </div>
@@ -48,33 +47,17 @@
 
     <script>
         // ==========================================
-        // 你的【数据+日记】数据库
-        // 在这里，你可以自由添加你的感受、饮食总结或是化验结果
+        // 数据库
+        // 注意看 2026-02-26 这条记录的 medicalData 结构
         // ==========================================
         const journalData = [
             {
                 date: '2025-12-24',
                 type: 'milestone', 
                 badge: '🏁 生酮启动',
-                weight: 160.0, // 假设的初始体重
-                fat: 28.5,     // 假设的初始体脂
-                diary: '把今天标记为生酮饮食的 Day 1。正式开始记录各项身体指标的变化，期待接下来的身体重塑之旅。'
-            },
-            {
-                date: '2026-02-12',
-                type: 'daily',
-                badge: '📝 日常打卡',
-                weight: 148.6,
-                fat: 24.4,
-                diary: '身体各项指标趋于稳定，BMI 25.7，基础代谢 1530 千卡。感觉精神状态比吃高碳水的时候好很多。'
-            },
-            {
-                date: '2026-02-16',
-                type: 'medical',
-                badge: '🩸 医疗/检测',
-                weight: 149.0,
-                fat: 24.5,
-                diary: '今天去做了生酮以来的全面血液检测。纯文字记录一下核心诊断数据：血酮指标良好，肝肾功能正常，血脂虽然有些波动但符合生酮初期的特征。整体代谢正在适应新模式。'
+                weight: 160.0,
+                fat: 28.5,
+                diary: '把今天标记为生酮饮食的 Day 1。正式开始记录各项身体指标的变化。'
             },
             {
                 date: '2026-02-20',
@@ -82,19 +65,90 @@
                 badge: '📝 日常打卡',
                 weight: 148.6,
                 fat: 24.4,
-                diary: '体重维持不变。目前算下来还有大概 16 斤脂肪要减。不过有时候也会想，如果减得太狠，以后身体没有能量储备，那不是更影响健康吗？哈哈。不管怎样，先稳住当前的饮食节奏。'
+                diary: '体重维持不变。目前算下来还有大概 16 斤脂肪要减。先稳住当前的饮食节奏。'
+            },
+            // ⭐️ 新增的医疗记录格式：
+            {
+                date: '2026-02-26',
+                type: 'medical',
+                badge: '🏥 血液/尿液筛查',
+                weight: 148.0, // 如果当天没称重，可以删掉这行
+                fat: 24.2,
+                diary: '今天进行了一次全面的化验。空腹胰岛素控制得很漂亮，尿酮呈弱阳性，说明身体已经顺利进入/保持在生酮状态。部分血常规指标略有异常（血钠偏低），可能和生酮利尿流失电解质有关，后续要注意补充海盐。',
+                // 灵活的医疗数据块，想加几条加几条，想换项目就换项目
+                medicalData: [
+                    {
+                        category: '🟢 生酮核心代谢',
+                        items: [
+                            { name: '空腹胰岛素', value: '9.70', unit: 'mU/L', normal: true },
+                            { name: '葡萄糖', value: '4.960', unit: 'mmol/L', normal: true },
+                            { name: '尿酮体', value: '+-', unit: '', normal: true, note: '弱阳' },
+                            { name: '甘油三酯', value: '0.600', unit: 'mmol/L', normal: true },
+                            { name: '高密度脂蛋白', value: '1.340', unit: 'mmol/L', normal: true },
+                            { name: '低密度脂蛋白', value: '2.980', unit: 'mmol/L', normal: true },
+                            { name: '尿酸', value: '216.00', unit: 'μmol/L', normal: true }
+                        ]
+                    },
+                    {
+                        category: '🔴 异常指标提醒',
+                        items: [
+                            { name: '钠 (Na)', value: '136.70', unit: 'mmol/L', normal: false, status: '↓ 偏低' },
+                            { name: '嗜酸性粒细胞比值', value: '15.7', unit: '%', normal: false, status: '↑ 偏高' },
+                            { name: '大血小板比率', value: '33.3', unit: '%', normal: false, status: '↑ 偏高' }
+                        ]
+                    }
+                ]
             }
         ];
 
         // 渲染时间轴
         const timelineContainer = document.getElementById('timeline-container');
-        // 将数据倒序排列（最新的在最上面）
+        
         [...journalData].reverse().forEach(item => {
-            // 根据类型设置不同的颜色标签
             let badgeColor = 'bg-gray-100 text-gray-700';
             if(item.type === 'milestone') badgeColor = 'bg-yellow-100 text-yellow-700';
-            if(item.type === 'medical') badgeColor = 'bg-red-100 text-red-600';
+            if(item.type === 'medical') badgeColor = 'bg-blue-100 text-blue-700';
             if(item.type === 'daily') badgeColor = 'bg-emerald-50 text-emerald-600';
+
+            // 构建基础指标栏 (体重/体脂)
+            let basicStatsHtml = '';
+            if (item.weight && item.fat) {
+                basicStatsHtml = `
+                    <div class="flex gap-4 text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                        <div class="flex items-center gap-1"><span class="text-gray-400">⚖️ 体重:</span> <span class="font-semibold">${item.weight} 斤</span></div>
+                        <div class="flex items-center gap-1"><span class="text-gray-400">📉 体脂:</span> <span class="font-semibold">${item.fat}%</span></div>
+                    </div>
+                `;
+            }
+
+            // 构建灵活的医疗数据 HTML
+            let medicalHtml = '';
+            if (item.medicalData) {
+                item.medicalData.forEach(group => {
+                    let itemsHtml = group.items.map(m => {
+                        const valColor = m.normal ? 'text-gray-800' : 'text-red-500 font-bold';
+                        const extraNote = m.status ? `<span class="text-xs text-red-500 ml-1">${m.status}</span>` : (m.note ? `<span class="text-xs text-gray-500 ml-1">(${m.note})</span>` : '');
+                        return `
+                            <div class="flex justify-between items-center py-1.5 border-b border-gray-50 last:border-0">
+                                <span class="text-sm text-gray-600">${m.name}</span>
+                                <div>
+                                    <span class="text-sm ${valColor}">${m.value} <span class="text-xs text-gray-400">${m.unit}</span></span>
+                                    ${extraNote}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    medicalHtml += `
+                        <div class="mt-4 bg-white border border-gray-100 rounded-lg p-4 shadow-sm">
+                            <h4 class="text-sm font-semibold text-gray-700 mb-2 border-l-2 border-emerald-400 pl-2">${group.category}</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">
+                                ${itemsHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
 
             const card = `
                 <div class="relative pl-6">
@@ -104,45 +158,26 @@
                             <h3 class="font-bold text-gray-800 text-lg">${item.date}</h3>
                             <span class="${badgeColor} text-xs px-2.5 py-1 rounded-full font-medium">${item.badge}</span>
                         </div>
-                        
-                        <div class="flex gap-4 text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
-                            <div class="flex items-center gap-1">
-                                <span class="text-gray-400">⚖️ 体重:</span> 
-                                <span class="font-semibold">${item.weight} 斤</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="text-gray-400">📉 体脂:</span> 
-                                <span class="font-semibold">${item.fat}%</span>
-                            </div>
-                        </div>
-                        
+                        ${basicStatsHtml}
                         <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line border-l-2 border-emerald-100 pl-3">
                             ${item.diary}
                         </div>
+                        ${medicalHtml}
                     </div>
                 </div>
             `;
             timelineContainer.innerHTML += card;
         });
 
-        // 渲染 ECharts 图表
+        // 渲染 ECharts (保持不变)
         const chartDom = document.getElementById('trendChart');
         const myChart = echarts.init(chartDom);
-        
-        // 过滤掉没有数值的记录（如果某些日记没填体重）
         const chartData = journalData.filter(item => item.weight && item.fat);
-        
         const option = {
             tooltip: { trigger: 'axis' },
             legend: { data: ['体重 (斤)', '体脂率 (%)'], bottom: 0 },
             grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
-            xAxis: { 
-                type: 'category', 
-                boundaryGap: false, 
-                data: chartData.map(item => item.date),
-                axisLine: { lineStyle: { color: '#e5e7eb' } },
-                axisLabel: { color: '#6b7280' }
-            },
+            xAxis: { type: 'category', boundaryGap: false, data: chartData.map(item => item.date), axisLine: { lineStyle: { color: '#e5e7eb' } }, axisLabel: { color: '#6b7280' } },
             yAxis: [
                 { type: 'value', min: 'dataMin', name: '体重', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } },
                 { type: 'value', min: 'dataMin', name: '体脂率', position: 'right', axisLine: { show: false }, splitLine: { show: false } }
