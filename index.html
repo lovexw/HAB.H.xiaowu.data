@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小吴乐意 - 生酮实证与身体变化记录</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f9fafb; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased min-h-screen pb-12">
+
+    <div class="bg-emerald-600 pb-20 pt-12 px-6 shadow-inner">
+        <div class="max-w-4xl mx-auto flex items-center gap-4 text-white">
+            <div class="w-16 h-16 rounded-full bg-emerald-500 flex items-center justify-center text-3xl border-2 border-white shadow-md">
+                🧑🏻‍💻
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold tracking-wide">小吴乐意</h1>
+                <p class="text-emerald-100 text-sm mt-1">公开的生酮饮食与身体重塑记录</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-4xl mx-auto px-6 -mt-10">
+        
+        <div class="glass-card p-6 mb-8">
+            <h2 class="text-lg font-semibold mb-2 text-gray-800">体重与体脂宏观趋势</h2>
+            <div id="trendChart" style="width: 100%; height: 300px;"></div>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="text-xl font-bold text-gray-800 mb-6">变化日志 & 医疗记录</h2>
+            
+            <div id="timeline-container" class="relative border-l-2 border-emerald-200 ml-4 space-y-8 pb-4">
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 你的【数据+日记】数据库
+        // 在这里，你可以自由添加你的感受、饮食总结或是化验结果
+        // ==========================================
+        const journalData = [
+            {
+                date: '2025-12-24',
+                type: 'milestone', 
+                badge: '🏁 生酮启动',
+                weight: 160.0, // 假设的初始体重
+                fat: 28.5,     // 假设的初始体脂
+                diary: '把今天标记为生酮饮食的 Day 1。正式开始记录各项身体指标的变化，期待接下来的身体重塑之旅。'
+            },
+            {
+                date: '2026-02-12',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 148.6,
+                fat: 24.4,
+                diary: '身体各项指标趋于稳定，BMI 25.7，基础代谢 1530 千卡。感觉精神状态比吃高碳水的时候好很多。'
+            },
+            {
+                date: '2026-02-16',
+                type: 'medical',
+                badge: '🩸 医疗/检测',
+                weight: 149.0,
+                fat: 24.5,
+                diary: '今天去做了生酮以来的全面血液检测。纯文字记录一下核心诊断数据：血酮指标良好，肝肾功能正常，血脂虽然有些波动但符合生酮初期的特征。整体代谢正在适应新模式。'
+            },
+            {
+                date: '2026-02-20',
+                type: 'daily',
+                badge: '📝 日常打卡',
+                weight: 148.6,
+                fat: 24.4,
+                diary: '体重维持不变。目前算下来还有大概 16 斤脂肪要减。不过有时候也会想，如果减得太狠，以后身体没有能量储备，那不是更影响健康吗？哈哈。不管怎样，先稳住当前的饮食节奏。'
+            }
+        ];
+
+        // 渲染时间轴
+        const timelineContainer = document.getElementById('timeline-container');
+        // 将数据倒序排列（最新的在最上面）
+        [...journalData].reverse().forEach(item => {
+            // 根据类型设置不同的颜色标签
+            let badgeColor = 'bg-gray-100 text-gray-700';
+            if(item.type === 'milestone') badgeColor = 'bg-yellow-100 text-yellow-700';
+            if(item.type === 'medical') badgeColor = 'bg-red-100 text-red-600';
+            if(item.type === 'daily') badgeColor = 'bg-emerald-50 text-emerald-600';
+
+            const card = `
+                <div class="relative pl-6">
+                    <div class="absolute w-4 h-4 bg-emerald-400 rounded-full -left-[9px] top-1.5 border-4 border-white shadow"></div>
+                    <div class="glass-card p-5 hover:shadow-md transition-shadow">
+                        <div class="flex flex-wrap justify-between items-center mb-3 gap-2">
+                            <h3 class="font-bold text-gray-800 text-lg">${item.date}</h3>
+                            <span class="${badgeColor} text-xs px-2.5 py-1 rounded-full font-medium">${item.badge}</span>
+                        </div>
+                        
+                        <div class="flex gap-4 text-sm text-gray-600 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-400">⚖️ 体重:</span> 
+                                <span class="font-semibold">${item.weight} 斤</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <span class="text-gray-400">📉 体脂:</span> 
+                                <span class="font-semibold">${item.fat}%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-gray-700 text-sm leading-relaxed whitespace-pre-line border-l-2 border-emerald-100 pl-3">
+                            ${item.diary}
+                        </div>
+                    </div>
+                </div>
+            `;
+            timelineContainer.innerHTML += card;
+        });
+
+        // 渲染 ECharts 图表
+        const chartDom = document.getElementById('trendChart');
+        const myChart = echarts.init(chartDom);
+        
+        // 过滤掉没有数值的记录（如果某些日记没填体重）
+        const chartData = journalData.filter(item => item.weight && item.fat);
+        
+        const option = {
+            tooltip: { trigger: 'axis' },
+            legend: { data: ['体重 (斤)', '体脂率 (%)'], bottom: 0 },
+            grid: { left: '3%', right: '4%', bottom: '15%', top: '10%', containLabel: true },
+            xAxis: { 
+                type: 'category', 
+                boundaryGap: false, 
+                data: chartData.map(item => item.date),
+                axisLine: { lineStyle: { color: '#e5e7eb' } },
+                axisLabel: { color: '#6b7280' }
+            },
+            yAxis: [
+                { type: 'value', min: 'dataMin', name: '体重', axisLine: { show: false }, splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } },
+                { type: 'value', min: 'dataMin', name: '体脂率', position: 'right', axisLine: { show: false }, splitLine: { show: false } }
+            ],
+            series: [
+                { name: '体重 (斤)', type: 'line', smooth: true, itemStyle: { color: '#10b981' }, data: chartData.map(item => item.weight) },
+                { name: '体脂率 (%)', type: 'line', smooth: true, yAxisIndex: 1, itemStyle: { color: '#f59e0b' }, data: chartData.map(item => item.fat) }
+            ]
+        };
+        myChart.setOption(option);
+        window.addEventListener('resize', () => myChart.resize());
+    </script>
+</body>
+</html>
