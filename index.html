@@ -63,10 +63,11 @@
 
     <script>
         // ==========================================
-        // 核心参数设置
+        // 核心参数设置 (加入了体脂目标)
         // ==========================================
-        const START_WEIGHT = 165.5; // 你的初始体重
-        const TARGET_WEIGHT = 130.0; // 你的终极目标
+        const START_WEIGHT = 165.5;  // 初始体重
+        const TARGET_WEIGHT = 130.0; // 终极体重目标
+        const TARGET_FAT = 18.0;     // 终极体脂目标 ✨
 
         // ==========================================
         // 核心数据库
@@ -93,13 +94,10 @@
             { date: '2026-02-12', type: 'daily', badge: '📝 日常打卡', weight: 148.6, fat: 24.4, diary: '体重来到 148.6 斤！生酮的威力依然在发挥。' },
             { date: '2026-02-18', type: 'daily', badge: '📝 日常打卡', weight: 149.4, fat: 24.5, diary: '轻微波动，维持在 149 上下。' },
             { date: '2026-02-20', type: 'daily', badge: '📝 日常打卡', weight: 148.6, fat: 24.4, diary: '目前算下来从最高点已经减了快 17 斤了。稳住当前的饮食节奏。' },
-            
-            // ⭐️ 本次新增：24号和25号的突破数据
             { date: '2026-02-24', type: 'daily', badge: '📝 日常打卡', weight: 148.2, fat: 24.3, diary: '打破了前几天的平台，体重降至 148.2 斤，体脂率也跟着下探到 24.3%，继续稳步前行。' },
             { date: '2026-02-25', type: 'milestone', badge: '🏆 身体及格！', weight: 146.8, fat: 23.6, diary: '大突破！一天之内降了 1.4 斤，直接来到 146.8 斤！体脂率更是降到了 23.6%，连身体得分也正式来到 61 分及格线！掉的都是纯脂肪，离 130 斤的目标越来越近了！' },
-            
             {
-                date: '2026-02-26', type: 'medical', badge: '🏥 血液/尿液筛查', weight: 146.8, fat: 23.6, // 沿用昨日完美体重
+                date: '2026-02-26', type: 'medical', badge: '🏥 血液/尿液筛查', weight: 146.8, fat: 23.6,
                 diary: '今天进行了一次全面的化验。其中空腹胰岛素控制得非常漂亮（9.70 mU/L），处于绝对正常的范围内，说明没有严重的胰岛素抵抗。结合尿酮弱阳性，身体正在高效利用脂肪。部分血常规指标略有异常（血钠偏低），可能和生酮利尿流失电解质有关，后续要注意补充海盐。',
                 medicalData: [
                     {
@@ -125,14 +123,13 @@
         // 动态计算进度条逻辑
         // ==========================================
         const validWeights = journalData.filter(item => item.weight);
-        const currentWeight = validWeights[validWeights.length - 1].weight; // 获取最新体重
+        const currentWeight = validWeights[validWeights.length - 1].weight;
         const totalToLose = START_WEIGHT - TARGET_WEIGHT;
         const lostSoFar = START_WEIGHT - currentWeight;
         let progressPercent = ((lostSoFar / totalToLose) * 100).toFixed(1);
         if (progressPercent < 0) progressPercent = 0;
         if (progressPercent > 100) progressPercent = 100;
 
-        // 延迟一点点执行动画，效果更好
         setTimeout(() => {
             document.getElementById('current-weight-display').textContent = `当前: ${currentWeight} 斤`;
             document.getElementById('progress-bar-fill').style.width = `${progressPercent}%`;
@@ -199,7 +196,7 @@
         });
 
         // ==========================================
-        // 渲染 ECharts 图表 (加入目标线)
+        // 渲染 ECharts 图表 (加入双目标线)
         // ==========================================
         const chartDom = document.getElementById('trendChart');
         const myChart = echarts.init(chartDom);
@@ -220,15 +217,14 @@
                 { 
                     type: 'value', 
                     name: '体重',
-                    // 让图表能一直显示到 130 斤以下
-                    min: function (value) { return Math.min(value.min, 128); }, 
+                    min: function (value) { return Math.min(value.min, TARGET_WEIGHT - 2); }, 
                     axisLine: { show: false }, 
                     splitLine: { lineStyle: { type: 'dashed', color: '#f3f4f6' } } 
                 },
                 { 
                     type: 'value', 
                     name: '体脂率', 
-                    min: 'dataMin',
+                    min: function (value) { return Math.min(value.min, TARGET_FAT - 1); }, 
                     position: 'right', 
                     axisLine: { show: false }, 
                     splitLine: { show: false } 
@@ -241,12 +237,11 @@
                     smooth: true, 
                     itemStyle: { color: '#10b981' }, 
                     data: chartData.map(item => item.weight),
-                    // ✨ 在这里加入 130斤 目标线 ✨
                     markLine: {
                         symbol: ['none', 'none'],
-                        label: { show: true, position: 'insideStartTop', formatter: '🎯 目标 130斤', color: '#059669', fontWeight: 'bold' },
+                        label: { show: true, position: 'insideStartTop', formatter: `🎯 目标 ${TARGET_WEIGHT}斤`, color: '#059669', fontWeight: 'bold' },
                         lineStyle: { type: 'dashed', color: '#10b981', width: 2 },
-                        data: [{ yAxis: 130 }]
+                        data: [{ yAxis: TARGET_WEIGHT }]
                     }
                 },
                 { 
@@ -255,7 +250,13 @@
                     smooth: true, 
                     yAxisIndex: 1, 
                     itemStyle: { color: '#f59e0b' }, 
-                    data: chartData.map(item => item.fat) 
+                    data: chartData.map(item => item.fat),
+                    markLine: {
+                        symbol: ['none', 'none'],
+                        label: { show: true, position: 'insideStartBottom', formatter: `🎯 目标 ${TARGET_FAT}%`, color: '#d97706', fontWeight: 'bold' },
+                        lineStyle: { type: 'dashed', color: '#f59e0b', width: 2 },
+                        data: [{ yAxis: TARGET_FAT }]
+                    }
                 }
             ]
         };
